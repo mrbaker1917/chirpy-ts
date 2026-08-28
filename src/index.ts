@@ -12,9 +12,9 @@ const port = 8080;
 app.use(middlewareLogResponses);
 app.use("/app", middlewareMetricsInc);
 app.use("/app", express.static("./src/app"));
-app.get("/api/metrics", handlerMetrics);
+app.get("/admin/metrics", handlerMetrics);
 app.get("/api/healthz", handlerReadiness);
-app.get("/api/reset", handlerReset);
+app.get("/admin/reset", handlerReset);
 
 async function main() {
     app.listen(port, () => {
