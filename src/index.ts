@@ -14,7 +14,7 @@ app.use("/app", middlewareMetricsInc);
 app.use("/app", express.static("./src/app"));
 app.get("/admin/metrics", handlerMetrics);
 app.get("/api/healthz", handlerReadiness);
-app.get("/admin/reset", handlerReset);
+app.post("/admin/reset", handlerReset);
 
 async function main() {
     app.listen(port, () => {
