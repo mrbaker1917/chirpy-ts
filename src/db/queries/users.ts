@@ -8,4 +8,8 @@ export async function createUser(user: NewUser) {
     .onConflictDoNothing()
     .returning();
   return result;
-}
+};
+
+export async function deleteUsers() {
+  await db.delete(users);
+};
