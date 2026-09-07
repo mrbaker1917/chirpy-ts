@@ -16,7 +16,7 @@ export async function handlerCreateUser(req: Request, res: Response) {
         throw new BadRequestError("No email in request!")
     }
     const user: NewUser = {
-        email: email
+        email: email,
     };
 
     const newUser = await createUser(user);
