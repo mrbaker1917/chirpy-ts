@@ -29,8 +29,11 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "argon": "^2.0.21",
+    "argon2": "^0.45.1",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "uninstall": "^0.0.0"
   }
 }
