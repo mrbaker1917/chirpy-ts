@@ -1,14 +1,16 @@
 import type { Request, Response } from "express";
-import { BadRequestError } from "./errors.js";
+import { BadRequestError, UserNotAuthenticatedError } from "./errors.js";
 
 import { respondWithJSON, respondWithError } from "./json.js";
 import { NewUser } from "../db/schema.js";
 import { createUser, getUserByEmail } from "../db/queries/users.js";
-import { checkPasswordHash, hashPassword } from "../auth.js";
+import { makeJWT, checkPasswordHash, hashPassword } from "../auth.js";
+import { config } from "../config.js"
 
 type parameters = {
     password: string;
     email: string;
+    expiresInSeconds: number;
 };
 
 export async function handlerCreateUser(req: Request, res: Response) {
@@ -53,26 +55,33 @@ export async function handlerLogin(req: Request, res: Response) {
     if (!password) {
         throw new BadRequestError("No password in request!");
     };
+    let expiryTime = params.expiresInSeconds;
+    if (!expiryTime || expiryTime > 3600) {
+        expiryTime = 3600;
+    };
     const user = await getUserByEmail(email);
     if (!user) {
-        respondWithError(res, 401, "Unauthorized");
-        return;
+        throw new UserNotAuthenticatedError("incorrect email or password");
     };
     if (!user.hashedPassword) {
-        respondWithError(res, 401, "incorrect email or password")
-        return;
+        throw new UserNotAuthenticatedError("incorrect email or password");
     }
     const match = await checkPasswordHash(password, user.hashedPassword);
     if (!match) {
-        respondWithError(res, 401, "incorrect email or password")
-        return;
+        throw new UserNotAuthenticatedError("incorrect email or password");
     };
+
+    const secret = config.api.secret;
+
+    const token = makeJWT(user.id, expiryTime, secret);
+
     type noPWNewUser = Omit<NewUser, "hashedPassword">
-    const noPWResponseUser: noPWNewUser = {
+    const noPWResponseUser = {
         id: user.id,
-        email: user.email,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        email: user.email,
+        token: token,
     }
     respondWithJSON(res, 200, noPWResponseUser);
 };
