@@ -22,6 +22,13 @@
       "when": 1789080192626,
       "tag": "0002_flowery_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789343827580,
+      "tag": "0003_daily_shinobi_shaw",
+      "breakpoints": true
     }
   ]
 }

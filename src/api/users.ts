@@ -4,13 +4,13 @@ import { BadRequestError, UserNotAuthenticatedError } from "./errors.js";
 import { respondWithJSON, respondWithError } from "./json.js";
 import { NewUser } from "../db/schema.js";
 import { createUser, getUserByEmail } from "../db/queries/users.js";
-import { makeJWT, checkPasswordHash, hashPassword } from "../auth.js";
+import { makeJWT, checkPasswordHash, hashPassword, makeRefreshToken } from "../auth.js";
 import { config } from "../config.js"
+import { saveRefreshToken } from "../db/queries/refresh.js";
 
 type parameters = {
     password: string;
     email: string;
-    expiresInSeconds: number;
 };
 
 export async function handlerCreateUser(req: Request, res: Response) {
@@ -55,10 +55,6 @@ export async function handlerLogin(req: Request, res: Response) {
     if (!password) {
         throw new BadRequestError("No password in request!");
     };
-    let expiryTime = params.expiresInSeconds;
-    if (!expiryTime || expiryTime > 3600) {
-        expiryTime = 3600;
-    };
     const user = await getUserByEmail(email);
     if (!user) {
         throw new UserNotAuthenticatedError("incorrect email or password");
@@ -73,7 +69,13 @@ export async function handlerLogin(req: Request, res: Response) {
 
     const secret = config.api.secret;
 
-    const token = makeJWT(user.id, expiryTime, secret);
+    const token = makeJWT(user.id, secret);
+
+    const refreshToken = makeRefreshToken();
+    const saveRF = await saveRefreshToken(user.id, refreshToken);
+    if (!saveRF) {
+        throw new Error("refresh Token not saved to db")
+    };
 
     type noPWNewUser = Omit<NewUser, "hashedPassword">
     const noPWResponseUser = {
@@ -82,6 +84,7 @@ export async function handlerLogin(req: Request, res: Response) {
         updatedAt: user.updatedAt,
         email: user.email,
         token: token,
+        refreshToken: refreshToken,
     }
     respondWithJSON(res, 200, noPWResponseUser);
 };
