@@ -65,7 +65,7 @@ export function validateJWT(tokenString: string, secret: string) {
 export function getBearerToken(req: Request): string {
   const authHeader = req.get("Authorization");
   if (!authHeader) {
-    throw new BadRequestError("No BearerToken found.");
+    throw new UserNotAuthenticatedError("No BearerToken found.");
   };
   const authParts = authHeader.split(" ");
   if (authParts.length != 2 || authParts[0] != "Bearer") {

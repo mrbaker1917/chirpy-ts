@@ -3,10 +3,10 @@ import { BadRequestError, UserNotAuthenticatedError } from "./errors.js";
 
 import { respondWithJSON, respondWithError } from "./json.js";
 import { NewUser } from "../db/schema.js";
-import { createUser, getUserByEmail } from "../db/queries/users.js";
-import { makeJWT, checkPasswordHash, hashPassword, makeRefreshToken } from "../auth.js";
+import { createUser, getUserByEmail, updateUser } from "../db/queries/users.js";
+import { makeJWT, checkPasswordHash, hashPassword, makeRefreshToken, getBearerToken, validateJWT } from "../auth.js";
 import { config } from "../config.js"
-import { saveRefreshToken } from "../db/queries/refresh.js";
+import { getUserFromRefreshToken, saveRefreshToken } from "../db/queries/refresh.js";
 
 type parameters = {
     password: string;
@@ -61,7 +61,7 @@ export async function handlerLogin(req: Request, res: Response) {
     };
     if (!user.hashedPassword) {
         throw new UserNotAuthenticatedError("incorrect email or password");
-    }
+    };
     const match = await checkPasswordHash(password, user.hashedPassword);
     if (!match) {
         throw new UserNotAuthenticatedError("incorrect email or password");
@@ -86,5 +86,34 @@ export async function handlerLogin(req: Request, res: Response) {
         token: token,
         refreshToken: refreshToken,
     }
+    respondWithJSON(res, 200, noPWResponseUser);
+};
+
+export async function handlerUpdateUser(req: Request, res: Response) {
+    const params: parameters = req.body;
+    const newEmail = params.email;
+    if (!newEmail) {
+        throw new BadRequestError("No email in request!");
+    };
+    const newPassword = params.password;
+    if (!newPassword) {
+        throw new BadRequestError("No password in request!");
+    };
+
+    const newHashedPW = await hashPassword(newPassword);
+    const token = getBearerToken(req);
+    if (!token) {
+        respondWithError(res, 401, "Access token is malformed.");
+    }
+    const userId = validateJWT(token, config.api.secret);
+
+    const updatedUser = await updateUser(userId, newEmail, newHashedPW);
+        const noPWResponseUser = {
+        id: updatedUser.id,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+        email: updatedUser.email,
+        token: token,
+    };
     respondWithJSON(res, 200, noPWResponseUser);
 };
