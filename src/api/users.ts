@@ -3,14 +3,16 @@ import { BadRequestError, UserNotAuthenticatedError } from "./errors.js";
 
 import { respondWithJSON, respondWithError } from "./json.js";
 import { NewUser } from "../db/schema.js";
-import { createUser, getUserByEmail, updateUser } from "../db/queries/users.js";
-import { makeJWT, checkPasswordHash, hashPassword, makeRefreshToken, getBearerToken, validateJWT } from "../auth.js";
+import { createUser, getUserByEmail, updateUser, upgradeUser } from "../db/queries/users.js";
+import { makeJWT, checkPasswordHash, hashPassword, makeRefreshToken, getBearerToken, validateJWT, getAPIKey } from "../auth.js";
 import { config } from "../config.js"
 import { getUserFromRefreshToken, saveRefreshToken } from "../db/queries/refresh.js";
 
 type parameters = {
     password: string;
     email: string;
+    event: string;
+    data: {userId: string};
 };
 
 export async function handlerCreateUser(req: Request, res: Response) {
@@ -41,6 +43,7 @@ export async function handlerCreateUser(req: Request, res: Response) {
         email: newUser.email,
         createdAt: newUser.createdAt,
         updatedAt: newUser.updatedAt,
+        isChirpyRed: false,
     }
     respondWithJSON(res, 201, noPWResponseUser);
 };
@@ -56,10 +59,10 @@ export async function handlerLogin(req: Request, res: Response) {
         throw new BadRequestError("No password in request!");
     };
     const user = await getUserByEmail(email);
-    if (!user) {
+    if (!user || typeof user.id !== "string") {
         throw new UserNotAuthenticatedError("incorrect email or password");
     };
-    if (!user.hashedPassword) {
+    if (!user.hashedPassword || typeof user.hashedPassword !== "string") {
         throw new UserNotAuthenticatedError("incorrect email or password");
     };
     const match = await checkPasswordHash(password, user.hashedPassword);
@@ -85,6 +88,7 @@ export async function handlerLogin(req: Request, res: Response) {
         email: user.email,
         token: token,
         refreshToken: refreshToken,
+        isChirpyRed: user.isChirpyRed,
     }
     respondWithJSON(res, 200, noPWResponseUser);
 };
@@ -114,6 +118,29 @@ export async function handlerUpdateUser(req: Request, res: Response) {
         updatedAt: updatedUser.updatedAt,
         email: updatedUser.email,
         token: token,
+        isChirpyRed: updatedUser.isChirpyRed,
     };
     respondWithJSON(res, 200, noPWResponseUser);
 };
+
+export async function handlerChirpyRedUpdate(req: Request, res: Response) {
+    const reqApiKey = await getAPIKey(req);
+    if (reqApiKey !== config.api.polkaAPIkey) {
+        res.status(401).end(0);
+    };
+
+    const params: parameters = req.body;
+    const event = params.event;
+    if (event !== "user.upgraded") {
+        res.status(204).end();
+        return;
+    };
+    const userId = params.data.userId;
+    const result = await upgradeUser(userId);
+    if (result === undefined) {
+        res.status(404).end();
+    } else {
+        res.status(204).end();
+    }
+
+}

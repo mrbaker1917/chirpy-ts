@@ -81,7 +81,7 @@ export function makeRefreshToken() {
 export async function handlerRefreshToken(req: Request, res: Response) {
   const refToken = getBearerToken(req);
   const userId = await getUserFromRefreshToken(refToken);
-  if (!userId) {
+  if (!userId || typeof userId.id !== "string") {
     respondWithError(res, 401, "Refresh Token not found");
     return;
   };
@@ -93,4 +93,16 @@ export async function handlerRevoke(req: Request, res: Response) {
   const refToken = getBearerToken(req);
   await revokeRefreshToken(refToken);
   res.status(204).send();
+};
+
+export async function getAPIKey(req: Request) {
+  const authHeader = req.get("Authorization");
+  if (!authHeader) {
+    throw new UserNotAuthenticatedError("No Polka ApiKey.");
+  };
+  const authParts = authHeader.split(" ");
+  if (authParts.length != 2 || authParts[0].trim() !== "ApiKey") {
+    throw new BadRequestError("ApiKey not parsed correctly");
+  };
+  return authParts[1].trim();
 };

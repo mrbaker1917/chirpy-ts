@@ -29,6 +29,13 @@
       "when": 1789343827580,
       "tag": "0003_daily_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789486684557,
+      "tag": "0004_awesome_power_man",
+      "breakpoints": true
     }
   ]
 }
